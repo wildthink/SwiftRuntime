@@ -1,0 +1,59 @@
+// swiftlint:disable variable_name
+import Foundation
+import CodeBase
+
+{% for type in types.based.DynamicType %}
+extension {{ type.name }} {
+
+    public var lens: Lens { return _Lens(this: self) }
+
+    class _Lens: Lens {
+
+        var this:{{ type.name }}
+        private static var type_map: [String:Any.Type] = [
+            {% for variable in type.storedVariables|instance %}
+            "{{variable.name}}": {{variable.typeName}}.self,
+            {% endfor %}
+        ]
+
+        init (this: {{ type.name }}) {
+            self.this = this
+        }
+
+        public func type (for key: String) -> Any.Type? {
+            return _Lens.type_map[key]
+        }
+
+        public func get<T> (for key: String, default value: T? = nil) -> T? {
+            switch key {
+                {% for variable in type.storedVariables|instance|publicGet %}
+                case "{{variable.name}}": return this.{{variable.name}} as? T
+                {% endfor %}
+                default:
+                    return value
+            }
+        }
+
+       public func set<T> (_ key: String, to value: T? = nil) {
+            switch key {
+                {% for variable in type.storedVariables|instance|publicSet %}
+                {% if variable.isMutable %}
+                case "{{variable.name}}":
+                {% if variable.isOptional %}
+                    if this.{{variable.name}} is T?,
+                {% else %}
+                    if this.{{variable.name}} is T,
+                {% endif %}
+                        let tv = value as? {{variable.typeName}} {
+                        this.{{variable.name}} = tv
+                    }
+                {% endif %}
+                {% endfor %}
+                default:
+                    return
+            }
+        }
+    }
+}
+
+{% endfor %}

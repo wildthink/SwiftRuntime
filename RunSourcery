@@ -1,0 +1,14 @@
+#!/bin/bash
+#env | sort > ~/Xcode_behaviors.out
+title=$XcodeProject
+if [ -z "$title" ]
+then
+title=$(basename $XcodeWorkspacePath)
+fi
+subtitle="Sourcery run complete"
+
+SOURCERY=/usr/local/bin/sourcery
+RESULTS="$($SOURCERY --config sourcery.yml 2>&1)"
+
+/usr/bin/osascript -e "display notification \"$RESULTS\" with title \"$title\" subtitle \"$subtitle\""
+
