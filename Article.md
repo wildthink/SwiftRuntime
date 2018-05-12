@@ -1,14 +1,32 @@
 ## Create a Swift Runtime with Sourcery
 
-#### Abstract
+Perhaps the most important feature of Objective-C (ObjC) is its reflection API; a programmer interface, available at runtime, that provides access to an object's structure and class hierarchy by a string-name. This includes the names and types of every property, the names of every method with the type of every parameter, and the name of every Class and its ancestry. It wasn't the first language to provide this nor the last but in its day it demonstrated a significant advantage in the creation of robust tooling like Interface Builder and advanced libraries like the Enterprise Objects Framework (EOF).
 
-We'll take a look at how you can leverage Sourcery, the best open-source Swift code-generator to re-create features of the Objective-C runtime in Swift. This is not a Sourcery tutorial. Rather, its intended as a meaningful example of what you can do with a bit of forethought and a small amount of coding with the right tools. Not a contrived example but hopefully something to get you thinking with enough [working code](https://github.com/wildthink/SwiftRuntime) to be useful and to build upon.
+At that time, we had to rely on the creators and developers of the compiler to provide new features if we could hope for anything at all. Today Swift has Mirrors. These are useful but are limited in comparison to the runtime of ObjC (and other languages). For these core components and features we still have to rely on the language/compiler community to provide them because creating these things requires access to the data structures that define and specify the structure of the Types and Classes we create.
 
-##### Kudos
+But I want what I want and I want it now. And I want it in Swift.
 
-Many thanks to [Krzysztof Zabłocki](http://merowing.info) for creating and maintaining [Sourcery](https://github.com/krzysztofzablocki/Sourcery)
+ObjC was originally implemented as a pre-processor, parsing a special syntax to create an Abstract Syntax Tree (AST) describing the classes and their structure to drive the generation of standard C code which, in turn, was fed to the compiler. Doing this today is certainly possible but not as easy nor necessarily desirable (for a number of reasons).
 
-#### Intro
+Drats! 
+
+But wait.
+
+The designers of the [LLVM](https://en.wikipedia.org/wiki/LLVM), a modular compiler toolchain, had the foresight to design the compiler process in a new way, a pipeline that allows up to tap into to the products of different stages of the compiler. This is still complicated but fortunately some knowledgable, industrious and virtuous people have created two important components to help; [SourceKitten](https://github.com/jpsim/SourceKitten) and [Sourcery](https://github.com/krzysztofzablocki/Sourcery). 
+
+Many many thanks to [JP Simard](https://twitter.com/simjp) and [Krzysztof Zabłocki](https://twitter.com/merowing_) and to the supporting community of contributors.
+
+SourceKitten links and communicates with `sourcekitd.framework` to parse our Swift source code into an AST and Sourcery combines a cleaner interface to the AST with several templating engines to generate code (or text) as we desire.
+
+Sourcery is already being applied to many domains and used in over 8,000 projects. Its well worth learning about. You can start with their [github](https://github.com/krzysztofzablocki/Sourcery). Go check it out. I can wait.
+
+Okay then, let's proceed.
+
+Basically what I want (for now) is the ability to have a more data driven system, configurable with external textual data. This could be as simple as putting CSS-like styling information in a file to be injected on-demand at runtime. Or it could involve a dynamic message passing infrastructure sending commands and parameters between loosely bound components.
+
+We'll take a look at how you can leverage Sourcery to re-create some features of the Objective-C runtime in Swift. Its intended as a meaningful example of what you can do with a bit of forethought and a small amount of coding with the right tools. Not a contrived example but hopefully something to get you thinking and provide enough working code to be useful and to build upon.
+
+#### Backstory
 
 I’m all-in with Swift these days but being an old Objective-C guy there are definitely times when I miss the dynamic runtime of ObjC. Even though type-safety is all the rage (with many a good reason) there are still times when I want to `get` or `set` a property by name or call a method given its name (or #selector). So for quite a while I found myself changing my `structs` to `classes` to leverage the @objc annotations but straddling the fence just isn't comfortable, if you take my meaning.
 
@@ -18,33 +36,20 @@ Dangerous? Indubitably. Effective? Absolutely (for special cases).
 
 This isn't for the feint of heart but it is instructive. And to be fair, some folks have done something similar in Swift by manipulating the underlying memory layout. But that's not going to be our approach. When you get right down to it, all that's going on is that the compiler is building a bunch of structures for us under the hood and exposing an API for us to use. So why not do this myself for my Swift structs and classes; its not really "rocket surgery". But boy can it be tedious.
 
-Then along came [Sourcery](https://github.com/krzysztofzablocki/Sourcery). If you're not familiar with this tool created by [Krzysztof Zabłocki](http://merowing.info/) you need to be. Its amazing.
-
-Essentially...
-
-> **Sourcery** is a code generator for Swift language, built on top of Apple's own SourceKit. It extends the language abstractions to allow you to generate boilerplate code automatically.
->
-
-There are some great resources on [github](https://github.com/krzysztofzablocki/Sourcery) to learn from so go check it out. I can wait.
-
-Okay then, let's proceed.
-
 We're not going to re-create the full runtime but enough to be instructive if not useful. Note that this will work for `structs` as well as `classes` BUT we require a bit of care when dealing `structs` as we will see. There are clearly different ways to approach this design-wise so I'm not advocating this in particular. The real point is to demonstrate what can be done with not a lot of effort.
 
 #### What Do We Want
 
-##### Step 1
+##### Step 1 - Let's start off by deciding what we would like to express in code.
 
-Let's start off by deciding what we would like to express in code.
+This time around we are going to create an API to help us with properties. Given the (String) name of a property we will be able to lookup its declared Type and get and set its values in a type-safe way without throwing or raising any exceptions. The one trade-off we will make is that if we ask for an unknown property we just get back nil so we can’t be sure that we didn’t mistype something or the value is really nil. Not awful but as we will see, we can even provide a solution for that as well.
 
-This time around we are going to create an API to help us with properties. Given the (String) name of a property we will be able to lookup its declared Type and get and set its values in a type-safe way without throwing or raising any exceptions. The one trade-off we will make is that if we ask for an unknown property we just get back nil so we can't be sure that we didn't mistype something or the value is really nil. Not awful but as we will see, we can even provide a solution for that as well.
+To avoid cluttering the original type with additional methods via `extension`we are going to create another `struct`that will wrap an instance giving us the desired API to the object. However, unlike Swift's Mirror, I am going to add one virtual property, the `lens`, to the original Type because I find it more convenient.
 
-To avoid cluttering the original type with additional methods via `extension` we are going to create another `struct` that will wrap an instance giving us the desired API to the object. However, unlike Swift's Mirror, I am going to add one virtual property, the `lens`, to the original Type because I find it more convenient.
-
-For our example, lets create a very simple type to play with. Since using a `struct` introduces a few wrinkles we use it to illustrate; using `classes` is more straight forward.
+For our example, lets create a very simple type to play with. Since using a `struct`introduces a few wrinkles we use`classes`which are more straight forward.
 
 ```swift
-struct Person {
+public class Person {
     var name: String
 }
 ```

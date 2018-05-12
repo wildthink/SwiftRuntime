@@ -27,6 +27,7 @@ extension Person {
         public func get<T> (for key: String, default value: T? = nil) -> T? {
             switch key {
                 case "name": return this.name as? T
+                case "age": return this.age as? T
                 default:
                     return value
             }

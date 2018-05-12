@@ -26,7 +26,7 @@ extension {{ type.name }} {
 
         public func get<T> (for key: String, default value: T? = nil) -> T? {
             switch key {
-                {% for variable in type.storedVariables|instance|publicGet %}
+                {% for variable in type.variables|instance|publicGet %}
                 case "{{variable.name}}": return this.{{variable.name}} as? T
                 {% endfor %}
                 default:
@@ -36,7 +36,7 @@ extension {{ type.name }} {
 
        public func set<T> (_ key: String, to value: T? = nil) {
             switch key {
-                {% for variable in type.storedVariables|instance|publicSet %}
+                {% for variable in type.variables|instance|publicSet %}
                 {% if variable.isMutable %}
                 case "{{variable.name}}":
                 {% if variable.isOptional %}
