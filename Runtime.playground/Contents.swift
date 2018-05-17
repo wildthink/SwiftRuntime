@@ -2,7 +2,7 @@
 
 import Cocoa
 
-public protocol Lens {
+public protocol Waldo {
     func value<T>() -> T?
     func type (for key: String) -> Any.Type?
     func get<T> (_ key: String, default value: T?) -> T?
@@ -10,10 +10,10 @@ public protocol Lens {
 }
 
 public protocol DynamicType {
-    var lens: Lens { get }
+    var waldo: Waldo { get }
 }
 
-extension Lens {
+extension Waldo {
     public subscript<T> (key: String, default value: T?) -> T? {
         get { return get(key, default: value) }
         set { set (key, to: newValue) }
@@ -40,9 +40,9 @@ public struct Person {
 
 extension Person {
 
-    public var lens: Lens { return _Lens(this: self) }
+    public var waldo: Waldo { return _Waldo(this: self) }
 
-    class _Lens: Lens {
+    class _Waldo: Waldo {
 
         var this: Person
         func value<T>() -> T? { return this as? T }
@@ -57,7 +57,7 @@ extension Person {
         }
 
         public func type (for key: String) -> Any.Type? {
-            return _Lens.type_map[key]
+            return _Waldo.type_map[key]
         }
 
         public func get<T> (_ key: String, default value: T? = nil) -> T? {
@@ -89,11 +89,11 @@ extension Person {
 }
 
 var mary = Person(name: "Mary", birthday: Date(timeIntervalSince1970: 0))
-let birthday: Date? = mary.lens.get("birthday", default: nil)
+let birthday: Date? = mary.waldo.get("birthday", default: nil)
 
-let lens = mary.lens
-lens.set("name", to: "Mary Jane")
-Swift.print (lens.value()!)
-Swift.print (lens.value()!)
+let waldo = mary.waldo
+waldo.set("name", to: "Mary Jane")
+Swift.print (mary)
+Swift.print (waldo.value()!)
 
 

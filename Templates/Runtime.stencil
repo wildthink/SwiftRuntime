@@ -11,7 +11,7 @@ extension {{ type.name }} {
 
         var this:{{ type.name }}
         private static var type_map: [String:Any.Type] = [
-            {% for variable in type.storedVariables|instance %}
+            {% for variable in type.variables|instance %}
             "{{variable.name}}": {{variable.typeName}}.self,
             {% endfor %}
         ]

@@ -61,7 +61,7 @@ public protocol Waldo {
 }
 ```
 
-For our example we will need something to work with. A simple `Person` will do. Note that `age` is a computed property - so it's read-only.
+For our example we will need something to work with. A simple `Person` will do. Note that `age` is a computed property - so it's read-only. Then, let's think about how we would like to use this new API.
 
 ```swift
 public struct Person {
@@ -72,17 +72,22 @@ public struct Person {
         return Calendar.current.dateComponents([.year], from: birthday, to: Date()).year!
     }
 }
-```
 
-Next, let's think about how we would like to use this new API.
-
-```swift
+// Create a Person and use a Waldo get and set some values
 var mary = Person(name: "Mary", birthday: Date(timeIntervalSince1970: 0))
 let waldo = mary.waldo()
 let age: Any = waldo.get("age")
 waldo.set("name", to: "Mary Jane")
-mary = waldo.value() // To get the updated Person
+
+Swift.print (mary) // -> Person(name: "Mary")
+Swift.print (waldo.value()!) // -> Person(name: "Mary Jane")
+
+mary = waldo.value() // To update 'mary' with the updated Person struct
 ```
+
+###### Note: Special Instructions for dealing with structs
+
+If the object being manipulated by Waldo is a `struct` (as is in our example) then we must remember that it is passed by value, so mutating operations ONLY APPLY TO THE COPY that the Waldo holds. Currently there isn't any way to capture a reference to a `struct`. We must use the Waldo's `value()` method to extract an object having the newly set values. We must also be aware that each call to get the object's Waldo will return a new Waldo holding a new copy of the instance when that instance is a `struct`. If our `Person` was defined as a `Class` then the Waldo would be holding a reference to `Mary` instead of a copy.
 
 ##### Step 2 - Create a working exemplar by hand.
 
@@ -149,26 +154,6 @@ extension Person {
     }
 }
 ```
-
-
-
-###### Note: Special Instructions for dealing with structs
-
-If the object being manipulated by Waldo is a `struct` then we must remember that it is passed by value, so mutating operations ONLY APPLY TO THE COPY that the Waldo holds. Currently there isn't any way to capture a reference to a `struct`. We must use the Waldo's `value()` method to extract an object having the newly set values. We must also be aware that each call to get the object's Waldo will return a new Waldo holding a new copy of the instance when that instance is a `struct`.
-
-```swift
-var mary = Person(name: "Mary")
-let name: String? = mary.waldo().get("name", default: nil)
-
-let waldo = mary.waldo()
-waldo.set("name", to: "Mary Jane")
-Swift.print (mary)
-// -> Person(name: "Mary")
-Swift.print (waldo.value()!) 
-// -> Person(name: "Mary Jane")
-```
-
-
 
 ##### Step 3 - Turn our example into a template
 
