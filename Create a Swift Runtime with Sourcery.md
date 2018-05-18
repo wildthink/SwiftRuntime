@@ -1,8 +1,8 @@
 ## Create a Swift Runtime with Sourcery
 
-Perhaps the most important feature of Objective-C (ObjC) is its reflection API; a programmer interface, available at runtime, that provides access to an object's structure and class hierarchy by a string-name. This includes the names and types of every property, the names of every method with the type of every parameter, and the name of every Class and its ancestry. It wasn't the first language to provide this nor the last but in its day it demonstrated a significant advantage in the creation of robust tooling like Interface Builder and advanced libraries like the Enterprise Objects Framework (EOF).
+Perhaps the most important feature of Objective-C (ObjC) is its reflection API; a programmer interface, available at runtime, that provides access to an object's structure and class hierarchy by a string-name. This includes the names and types of every property, the names of every method with the type of every parameter, and the name of every Class and its ancestry. It wasn't the first language to provide this nor the last but in its day it demonstrated a significant advantage in the creation of robust tooling like Interface Builder and advanced libraries like the Enterprise Objects Framework (EOF, a predecessor of CoreData).
 
-At that time, we had to rely on the creators and developers of the compiler to provide new features if we could hope for anything at all. Today, Swift has Mirrors. These are useful but are limited in comparison to the runtime of ObjC (and other languages). For these core components and features, we still have to rely on the language/compiler community because they have access to the data structures that define and specify the structure of the Types and Classes we create.
+At that time, we had to rely on the creators and developers of the compiler to provide new features if we could hope for anything at all. Today, Swift has [Mirrors](https://developer.apple.com/documentation/swift/mirror). These are useful but are limited in comparison to the runtime of ObjC (and other languages). For these core components and features, we still have to rely on the language/compiler community because they have access to the data structures that define and specify the structure of the Types and Classes we create.
 
 But I want what I want and I want it now. And I want it in Swift.
 
@@ -28,13 +28,13 @@ We'll take a look at how you can leverage Sourcery to re-create some features of
 
 #### Backstory
 
-I’m all-in with Swift these days but being an old, Objective-C guy there are definitely times when I miss the dynamic runtime of ObjC. Even though type-safety is all the rage (with many a good reason) there are still times when I want to `get` or `set` a property by name or call a method given its name (or #selector). So for quite a while I found myself changing my `structs` to `classes` to leverage the @objc annotations but straddling the fence just isn't comfortable.
+I’m all-in with Swift these days but being a long time Objective-C guy there are definitely times when I miss the dynamic runtime of ObjC. Even though type-safety is all the rage (with many a good reason) there are still times when I want to `get` or `set` a property by name or call a method given its name (or #selector). So for quite a while I found myself changing my `structs` to `classes` to leverage the @objc annotations but straddling the fence just isn't comfortable.
 
 Way back when, I was known to pop the hood on the Objc Runtime, bash the `isa` pointer, lookup implementation pointers, fiddle with the va_list to call the function, and create classes at runtime. Mostly for fun but there were a few times when it was just the ticket to solve a particular problem.
 
 Dangerous? Indubitably. Effective? Absolutely (in special cases).
 
-This wasn't for the feint of heart but it was interesting and instructive. To be fair, some folks have done something similar in Swift by manipulating the underlying memory layout. But that's not going to be our approach. When you get right down to it, all that's going on is that the compiler is building a bunch of data structures for us under the hood and exposing an API for us to use them. So why not do this ourselves for our own Swift `structs` and `classes`; it's not really "rocket surgery". But man can it be tedious.
+This wasn't for the feint of heart but it was interesting and instructive. To be fair, some folks have done something similar in Swift by manipulating the underlying memory layout. But that's not going to be our approach. When you get right down to it, all that's going on is that the compiler is building a bunch of data structures for us under the hood and exposing an API for us to use them. So why not do this ourselves for our own Swift `structs` and `classes`; it's not really "rocket science", but man can it be tedious.
 
 We're not going to re-create the full runtime here but hopefully enough to be at least instructive, if not useful. Note that this will work for `structs` as well as `classes` BUT it requires a bit of care when dealing with `structs` (as we will see). There are clearly different ways to approach this design-wise, I'm presenting only one solution of many. The real point is to demonstrate what can be done with thoughtful design, the right tools, and minimal effort.
 
@@ -44,7 +44,7 @@ We're not going to re-create the full runtime here but hopefully enough to be at
 
 For our example, we are going to create an API to help us with properties. Given the (String) name of a property we will be able to look up its declared type and get and set its values in a type-safe way without throwing or raising any exceptions. The one flaw is that if we ask for an unknown property we just get back `nil` so we can’t be sure if the value really is `nil` or if we misspelled something.
 
-To encapsulate this API we are going to define a **Waldo** (a <u>remote manipulator</u>). To identify the types we want to access with a Waldo, we introduce a new protocol, `DynamicType` - something that each of our types will need to adopt. This protocol acts as a marker for Sourcery as we will see later. Waldo is not unlike Swift's Mirror in intent but it's something we own and get to define.
+To encapsulate this API we are going to define a **Waldo** (a <u>remote manipulator</u> named after a Heinlein character, "Waldo F. Jones" ). To identify the types we want to access with a Waldo, we introduce a new protocol, `DynamicType` - something that each of our types will need to adopt. This protocol acts as a marker for Sourcery as we will see later. Waldo is not unlike Swift's Mirror in intent but it's something we own and get to define.
 
 Waldo is defined as a protocol and each type must provide its own implementation providing access to its members. Formally, we define a `DynamicType` and `Waldo` as follows.
 
@@ -249,5 +249,4 @@ And Sourcery docs and github here.
  [Sourcery documentation](https://cdn.rawgit.com/krzysztofzablocki/Sourcery/master/docs/index.html) 
 
  [Sourcery](https://github.com/krzysztofzablocki/Sourcery)
-
 
